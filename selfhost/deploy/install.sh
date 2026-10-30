@@ -2,7 +2,8 @@
 # Installs or updates the self-hosted Nuvio backend (NuvioMedia/self-host) on docker-prod,
 # with this fork's Live TV migration, hardened settings and a LAN-only Traefik route.
 #
-#   ./install.sh                 first install, or update (git pull, migrations, restart)
+#   ./install.sh                 first install, or apply changes (migrations, settings, restart)
+#   ./install.sh update          also pull the newest deploy kit and self-host first
 #   ./install.sh lock-signup     no new accounts (run after creating yours)
 #   ./install.sh unlock-signup   allow new accounts again
 #   ./install.sh credentials     show Backend URL + publishable key
@@ -78,7 +79,14 @@ signup() {
 }
 
 case "${1:-install}" in
-    install|update) install_or_update ;;
+    install) install_or_update ;;
+    update)
+        # This kit's own checkout (a sparse clone of the fork), then run the new version.
+        if git -C "$HERE" rev-parse --git-dir >/dev/null 2>&1; then
+            git -C "$HERE" pull --ff-only
+        fi
+        exec "$HERE/install.sh" install
+        ;;
     lock-signup) signup true ;;
     unlock-signup) signup false ;;
     credentials) cd "$NUVIO_DIR" && ./nuvio credentials ;;

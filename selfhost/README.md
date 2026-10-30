@@ -27,9 +27,14 @@ Vereist: 64-bit Linux, Docker met Compose v2, git, openssl en curl. Alles staat 
 | `compose.traefik.yml` | Traefik-labels op de Nuvio-gateway (LAN-only router) |
 | `traefik-dynamic.yml` | Alternatief voor je file provider |
 
+Je hoeft niet de hele fork te clonen. Met een sparse clone haal je alleen `selfhost/` op
+(minder dan 1 MB):
+
 ```sh
-# op docker-prod, in een checkout van deze fork
-cd NuvioPlusIPTV/selfhost/deploy
+# op docker-prod
+git clone --depth 1 --filter=blob:none --sparse -b feature/selfhost-sync     https://github.com/schumi2004/NuvioPlusIPTV ~/nuvio-deploy
+git -C ~/nuvio-deploy sparse-checkout set selfhost
+cd ~/nuvio-deploy/selfhost/deploy
 cp nuvio.env.example nuvio.env
 vi nuvio.env                 # CHANGE_ME invullen: hostnaam, certresolver, LAN-ranges
 sudo mkdir -p /opt/nuvio-self-host && sudo chown "$USER" /opt/nuvio-self-host
@@ -48,8 +53,9 @@ Wat `install.sh` doet:
 - Draait `./nuvio up` (migraties en health checks op `127.0.0.1:8080`) en daarna
   `./nuvio credentials`.
 
-Later bijwerken doe je met hetzelfde commando: `./install.sh`. Maak eerst een backup (zie
-onder).
+Bijwerken doe je met `./install.sh update`. Dat haalt eerst de nieuwste deploy-kit op met
+`git pull` in de sparse clone (je `nuvio.env` blijft staan) en daarna self-host. Daarna
+past het migraties toe en herstart het de stack. Maak eerst een backup (zie onder).
 
 ## 2. Traefik en DNS (alleen thuis)
 
