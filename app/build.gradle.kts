@@ -101,6 +101,30 @@ val sentryProject = providers.environmentVariable("SENTRY_PROJECT").orNull?.trim
     ?: resolveProperty(devProperties, localProperties, "SENTRY_PROJECT").takeIf { it.isNotBlank() }
 val sentryMappingUploadEnabled = sentryAuthToken != null && sentryOrg != null && sentryProject != null
 
+// Live TV fork: your own self-hosted Nuvio server (NuvioMedia/self-host), built in as the only
+// server. When set, the app never uses the official Nuvio backend and has no way to switch to it.
+val selfhostBackendUrl = (providers.environmentVariable("SELFHOST_BACKEND_URL").orNull?.trim()?.takeIf { it.isNotBlank() }
+    ?: resolveProperty(devProperties, localProperties, "SELFHOST_BACKEND_URL")).trimEnd('/')
+val selfhostPublishableKey = providers.environmentVariable("SELFHOST_PUBLISHABLE_KEY").orNull?.trim()?.takeIf { it.isNotBlank() }
+    ?: resolveProperty(devProperties, localProperties, "SELFHOST_PUBLISHABLE_KEY")
+if (selfhostBackendUrl.isNotBlank()) {
+    require(selfhostBackendUrl.startsWith("https://") || selfhostBackendUrl.startsWith("http://")) {
+        "SELFHOST_BACKEND_URL must start with https:// (or http:// on a private network)"
+    }
+    require(selfhostPublishableKey.isNotBlank()) {
+        "SELFHOST_PUBLISHABLE_KEY is required with SELFHOST_BACKEND_URL (see ./nuvio credentials)"
+    }
+}
+// Never build in Nuvio's own backend, not even by a leftover secret.
+require(!selfhostBackendUrl.contains("nuvio.tv", ignoreCase = true)) {
+    "SELFHOST_BACKEND_URL points to Nuvio's backend; use your own server"
+}
+listOf("NUVIO_SUPABASE_URL", "NUVIO_SUPABASE_FALLBACK_URL").forEach { key ->
+    require(!resolveProperty(devProperties, localProperties, key).contains("nuvio.tv", ignoreCase = true)) {
+        "$key points to Nuvio's backend; this fork only uses your own server (SELFHOST_BACKEND_URL)"
+    }
+}
+
 fun env(name: String): String? = providers.environmentVariable(name).orNull
 
 fun truthy(value: String?): Boolean {
@@ -167,7 +191,7 @@ android {
                 }
             }
         }
-        buildConfigField("String", "SUPPORTERS_API_BASE_URL", buildConfigString(localProperties.getProperty("SUPPORTERS_API_BASE_URL", "https://nuvio.tv/")))
+        buildConfigField("String", "SUPPORTERS_API_BASE_URL", buildConfigString(localProperties.getProperty("SUPPORTERS_API_BASE_URL", "")))
         buildConfigField("String", "SUPPORT_URL", buildConfigString(localProperties.getProperty("SUPPORT_URL", "https://nuvio.tv/support")))
         buildConfigField("String", "AVATAR_PUBLIC_BASE_URL", "\"${localProperties.getProperty("AVATAR_PUBLIC_BASE_URL", "")}\"")
         buildConfigField("String", "UNIQUE_CONTRIBUTIONS_BASE_URL", "\"${localProperties.getProperty("UNIQUE_CONTRIBUTIONS_BASE_URL", "")}\"")
@@ -177,8 +201,16 @@ android {
         buildConfigField("String", "SENTRY_DSN", buildConfigString(sentryDsn))
 
         // In-app updater (GitHub Releases)
-        buildConfigField("String", "GITHUB_OWNER", "\"homelessbrian\"")
-        buildConfigField("String", "GITHUB_REPO", "\"NuvioPlusIPTV\"")
+        // Live TV fork: in-app updates come from this fork's own releases, so an upstream build
+        // (same signing key) never replaces it.
+        buildConfigField("String", "GITHUB_OWNER", buildConfigString(localProperties.getProperty("GITHUB_OWNER", "schumi2004")))
+        buildConfigField("String", "GITHUB_REPO", buildConfigString(localProperties.getProperty("GITHUB_REPO", "NuvioPlusIPTV")))
+
+        buildConfigField("String", "SELFHOST_BACKEND_URL", buildConfigString(selfhostBackendUrl))
+        // Live TV fork: the Sports hub reads ESPN, sporting-events.org and a TheSportsDB mirror
+        // on GitHub straight from each TV. Off unless SPORTS_ENABLED=true.
+        buildConfigField("boolean", "FEATURE_SPORTS_ENABLED", parseBooleanProperty(resolveProperty(devProperties, localProperties, "SPORTS_ENABLED")).toString())
+        buildConfigField("String", "SELFHOST_PUBLISHABLE_KEY", buildConfigString(selfhostPublishableKey))
     }
 
     flavorDimensions += "distribution"
@@ -241,7 +273,7 @@ android {
             buildConfigField("String", "TRAILER_API_URL", "\"${devProperties.getProperty("TRAILER_API_URL", "")}\"")
             buildConfigField("String", "IMDB_RATINGS_API_BASE_URL", "\"${devProperties.getProperty("IMDB_RATINGS_API_BASE_URL", "")}\"")
             buildConfigField("String", "IMDB_TAPFRAME_API_BASE_URL", "\"${devProperties.getProperty("IMDB_TAPFRAME_API_BASE_URL", "")}\"")
-            buildConfigField("String", "SUPPORTERS_API_BASE_URL", buildConfigString(resolveProperty(devProperties, localProperties, "SUPPORTERS_API_BASE_URL", "https://nuvio.tv/")))
+            buildConfigField("String", "SUPPORTERS_API_BASE_URL", buildConfigString(resolveProperty(devProperties, localProperties, "SUPPORTERS_API_BASE_URL", "")))
             buildConfigField("String", "SUPPORT_URL", buildConfigString(resolveProperty(devProperties, localProperties, "SUPPORT_URL", "https://nuvio.tv/support")))
             buildConfigField("String", "AVATAR_PUBLIC_BASE_URL", "\"${devProperties.getProperty("AVATAR_PUBLIC_BASE_URL", localProperties.getProperty("AVATAR_PUBLIC_BASE_URL", ""))}\"")
             buildConfigField("String", "UNIQUE_CONTRIBUTIONS_BASE_URL", "\"${devProperties.getProperty("UNIQUE_CONTRIBUTIONS_BASE_URL", localProperties.getProperty("UNIQUE_CONTRIBUTIONS_BASE_URL", ""))}\"")
@@ -276,7 +308,7 @@ android {
             buildConfigField("String", "TRAILER_API_URL", "\"${localProperties.getProperty("TRAILER_API_URL", "")}\"")
             buildConfigField("String", "IMDB_RATINGS_API_BASE_URL", "\"${localProperties.getProperty("IMDB_RATINGS_API_BASE_URL", "")}\"")
             buildConfigField("String", "IMDB_TAPFRAME_API_BASE_URL", "\"${localProperties.getProperty("IMDB_TAPFRAME_API_BASE_URL", "")}\"")
-            buildConfigField("String", "SUPPORTERS_API_BASE_URL", buildConfigString(localProperties.getProperty("SUPPORTERS_API_BASE_URL", "https://nuvio.tv/")))
+            buildConfigField("String", "SUPPORTERS_API_BASE_URL", buildConfigString(localProperties.getProperty("SUPPORTERS_API_BASE_URL", "")))
             buildConfigField("String", "SUPPORT_URL", buildConfigString(localProperties.getProperty("SUPPORT_URL", "https://nuvio.tv/support")))
             buildConfigField("String", "AVATAR_PUBLIC_BASE_URL", "\"${localProperties.getProperty("AVATAR_PUBLIC_BASE_URL", "")}\"")
             buildConfigField("String", "UNIQUE_CONTRIBUTIONS_BASE_URL", "\"${localProperties.getProperty("UNIQUE_CONTRIBUTIONS_BASE_URL", "")}\"")
@@ -370,13 +402,6 @@ android {
 // Live TV fork versioning. Each build's versionCode is Nuvio's code x 100 plus a fork build
 // number, so fork updates released between Nuvio versions install as normal upgrades.
 // The release workflow passes -PlivetvBuildNumber and -PlivetvVersionName.
-// Live TV fork: Google Drive sync (OAuth client of type "TVs and Limited Input devices").
-android.defaultConfig.buildConfigField(
-    "String", "GOOGLE_DRIVE_CLIENT_ID", "\"${localProperties.getProperty("GOOGLE_DRIVE_CLIENT_ID", "")}\""
-)
-android.defaultConfig.buildConfigField(
-    "String", "GOOGLE_DRIVE_CLIENT_SECRET", "\"${localProperties.getProperty("GOOGLE_DRIVE_CLIENT_SECRET", "")}\""
-)
 
 // The Nuvio version this fork is built on ("1.1.0-beta.4"), before the fork's own build number is
 // added: addons and their proxies see exactly what official Nuvio sends ("Nuvio/1.1.0-beta.4").

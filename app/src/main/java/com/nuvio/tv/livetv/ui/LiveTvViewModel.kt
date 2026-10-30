@@ -80,14 +80,14 @@ class LiveTvViewModel @Inject constructor(
     private val posterResolver: com.nuvio.tv.livetv.data.LiveTvPosterResolver,
     private val matcher247: com.nuvio.tv.livetv.data.LiveTv247Matcher,
     layoutPrefs: com.nuvio.tv.data.local.LayoutPreferenceDataStore,
-    driveSync: com.nuvio.tv.livetv.sync.LiveTvDriveSync,
+    accountSync: com.nuvio.tv.livetv.sync.LiveTvAccountSync,
     val recorder: com.nuvio.tv.livetv.record.LiveTvRecorder,
     val scheduler: com.nuvio.tv.livetv.record.LiveTvRecordingScheduler
 ) : ViewModel() {
 
     init {
-        // Google Drive sync (if connected): pick up a newer setup from another TV.
-        driveSync.start()
+        // Server sync (signed in to your own server): pick up a newer setup from another TV.
+        accountSync.start()
     }
 
 

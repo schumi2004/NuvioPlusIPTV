@@ -28,6 +28,8 @@ internal class SportsFeeds {
         .build()
 
     private fun get(url: String): String {
+        // Live TV fork: with Sports off in this build, nothing is ever fetched for it.
+        if (!com.nuvio.tv.BuildConfig.FEATURE_SPORTS_ENABLED) throw java.io.IOException("Sports is off in this build")
         val req = Request.Builder().url(url)
             .header("Accept", "application/json")
             .header("User-Agent", "Mozilla/5.0 (Linux; Android 12; TV) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36")

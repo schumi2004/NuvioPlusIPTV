@@ -12,7 +12,12 @@ import javax.inject.Singleton
 class ServerConfigurationStore @Inject constructor(
     @param:ApplicationContext private val context: Context
 ) {
+    /** True when the build has your own server built in: it's then the only server there is. */
+    val isLocked: Boolean
+        get() = BuildConfig.SELFHOST_BACKEND_URL.isNotBlank()
+
     fun loadActive(): ServerConfiguration {
+        if (isLocked) return builtInSelfHostConfiguration()
         if (!BuildConfig.FEATURE_CUSTOM_SERVER_CONNECTIONS_ENABLED) return officialConfiguration()
         val preferences = context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
         if (!preferences.getBoolean(KEY_CUSTOM_ENABLED, false)) return officialConfiguration()
@@ -40,7 +45,7 @@ class ServerConfigurationStore @Inject constructor(
     }
 
     fun saveCustom(configuration: ServerConfiguration): Boolean {
-        if (!BuildConfig.FEATURE_CUSTOM_SERVER_CONNECTIONS_ENABLED) return false
+        if (isLocked || !BuildConfig.FEATURE_CUSTOM_SERVER_CONNECTIONS_ENABLED) return false
         return context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
             .edit()
             .putBoolean(KEY_CUSTOM_ENABLED, true)
@@ -54,10 +59,32 @@ class ServerConfigurationStore @Inject constructor(
     }
 
     fun useOfficial(): Boolean =
-        context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
+        !isLocked && context.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
             .edit()
             .clear()
             .commit()
+
+    /**
+     * Live TV fork: your own server, built in (SELFHOST_BACKEND_URL). Treated as a custom server,
+     * so email sign-in and Live TV sync are on, with the capabilities NuvioMedia/self-host serves.
+     */
+    private fun builtInSelfHostConfiguration(): ServerConfiguration {
+        val backendUrl = BuildConfig.SELFHOST_BACKEND_URL.trim().trimEnd('/')
+        return ServerConfiguration(
+            backendUrl = backendUrl,
+            publishableKey = BuildConfig.SELFHOST_PUBLISHABLE_KEY.trim(),
+            capabilities = ServerCapabilities(
+                emailPasswordAuth = true,
+                tvLogin = true,
+                watchParty = false
+            ),
+            isCustom = true,
+            discoveryUrl = "$backendUrl/.well-known/nuvio",
+            tvLoginWebBaseUrl = "$backendUrl/tv-login",
+            deviceLoginWebBaseUrl = "$backendUrl/link",
+            avatarPublicBaseUrl = "$backendUrl/storage/v1/object/public/avatars"
+        )
+    }
 
     private fun officialConfiguration() = ServerConfiguration(
         backendUrl = BuildConfig.SUPABASE_URL.trimEnd('/'),

@@ -286,7 +286,7 @@ internal fun LiveTvSettingsContent(
     val status by viewModel.status.collectAsStateWithLifecycle()
     val accounts by viewModel.accounts.collectAsStateWithLifecycle()
     var dialog by remember { mutableStateOf<LiveDialog?>(null) }
-    val drive by viewModel.driveSync.state.collectAsStateWithLifecycle()
+    val drive by viewModel.accountSync.state.collectAsStateWithLifecycle()
     val developerToolsOn by com.nuvio.tv.livetv.model.DeveloperTools.enabled.collectAsStateWithLifecycle()
     val onDemandHas by viewModel.onDemand.hasContent.collectAsStateWithLifecycle()
     val onDemandStatus by viewModel.onDemand.status.collectAsStateWithLifecycle()
@@ -339,28 +339,20 @@ internal fun LiveTvSettingsContent(
         ) {
             // ------------------------------------------------------------ Backup & Sync
             if (show(LiveTvPage.MAIN)) item(key = "drive") {
-                DriveSyncCard(
+                AccountSyncCard(
                     modifier = if (firstRequester != null) Modifier.focusRequester(firstRequester) else Modifier,
                     state = drive,
                     expanded = "drive" in open,
                     onToggleExpanded = { toggle("drive") },
-                    onConnect = { viewModel.driveSync.beginSignIn() },
-                    onAutoSync = { viewModel.driveSync.setAutoSync(it) },
+                    onAutoSync = { viewModel.accountSync.setAutoSync(it) },
                     onBackUp = {
                         confirm(
                             "Back up now?",
-                            "The copy in your Google Drive is replaced with this TV's Live TV setup.",
+                            "The copy on your server is replaced with this TV's Live TV setup.",
                             "Back Up"
-                        ) { viewModel.driveSync.backUpNow() }
+                        ) { viewModel.accountSync.backUpNow() }
                     },
-                    onRestore = { dialog = LiveDialog.ConfirmRestore },
-                    onDisconnect = {
-                        confirm(
-                            "Disconnect Google Drive?",
-                            "This TV stops syncing. Your backup stays in your Google Drive.",
-                            "Disconnect"
-                        ) { viewModel.driveSync.disconnect() }
-                    }
+                    onRestore = { dialog = LiveDialog.ConfirmRestore }
                 )
             }
 
@@ -1558,10 +1550,6 @@ internal fun LiveTvSettingsContent(
         } // key(page)
     }
 
-    drive.signIn?.let { prompt ->
-        DriveSignInDialog(prompt = prompt, onCancel = { viewModel.driveSync.cancelSignIn() })
-    }
-
     // ---------------------------------------------------------------- dialogs
     val close = { dialog = null }
     when (val d = dialog) {
@@ -1808,16 +1796,16 @@ internal fun LiveTvSettingsContent(
             // When the saved copy was made, and on which TV: restoring an old copy puts back old
             // playlists and logins (a provider's old address, an old password).
             var loaded by remember { mutableStateOf(false) }
-            var info by remember { mutableStateOf<com.nuvio.tv.livetv.sync.LiveTvDriveSync.BackupInfo?>(null) }
+            var info by remember { mutableStateOf<com.nuvio.tv.livetv.sync.LiveTvAccountSync.BackupInfo?>(null) }
             LaunchedEffect(Unit) {
-                info = runCatching { viewModel.driveSync.backupInfo() }.getOrNull()
+                info = runCatching { viewModel.accountSync.backupInfo() }.getOrNull()
                 loaded = true
             }
             ConfirmDeleteDialog(
-                title = "Restore from Google Drive?",
-                message = restoreMessage(loaded, info, viewModel.driveSync.localChangedAt()),
+                title = "Restore from your server?",
+                message = restoreMessage(loaded, info, viewModel.accountSync.localChangedAt()),
                 onDismiss = close,
-                onConfirm = { viewModel.driveSync.restoreNow(); close() },
+                onConfirm = { viewModel.accountSync.restoreNow(); close() },
                 confirmLabel = "Restore"
             )
         }
@@ -2011,31 +1999,29 @@ private fun LoadingLine(message: String) {
     }
 }
 
-// ==================================================================== Google Drive sync
+// ==================================================================== Server sync
 
-/** Collapsed to one line until selected; then shows sign-in, backup and restore. */
+/** Collapsed to one line until selected; then shows the account, backup and restore. */
 @Composable
-private fun DriveSyncCard(
+private fun AccountSyncCard(
     modifier: Modifier = Modifier,
-    state: com.nuvio.tv.livetv.sync.DriveSyncState,
+    state: com.nuvio.tv.livetv.sync.LiveTvSyncState,
     expanded: Boolean,
     onToggleExpanded: () -> Unit,
-    onConnect: () -> Unit,
     onAutoSync: (Boolean) -> Unit,
     onBackUp: () -> Unit,
-    onRestore: () -> Unit,
-    onDisconnect: () -> Unit
+    onRestore: () -> Unit
 ) {
     val status = when {
-        !state.available -> "Not available in this build"
-        !state.connected -> "Off"
+        !state.available -> "Off (not your server)"
+        !state.connected -> "Off · not signed in"
         state.busy -> "Syncing…"
         state.lastSyncMs > 0 -> "On · last synced " + DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(state.lastSyncMs))
         else -> "On"
     }
     LiveSection(
         title = "Backup & Sync",
-        summary = "Google Drive · " + status,
+        summary = (state.server ?: "Your server") + " · " + status,
         icon = Icons.Default.Backup,
         open = expanded,
         onToggle = onToggleExpanded,
@@ -2044,92 +2030,29 @@ private fun DriveSyncCard(
         run {
             when {
                 !state.available -> Text(
-                    text = "Google Drive sync needs to be set up by whoever builds this app.",
+                    text = "Live TV sync only works with a server you run, because your playlists and IPTV logins are part of it. Connect to your own server from the account sign-in screen (the ⋮ button in its top-left corner), then sign in.",
                     style = MaterialTheme.typography.bodySmall,
                     color = NuvioTheme.colors.TextSecondary
                 )
-                !state.connected -> {
-                    Text(
-                        text = "Your playlists, guides, favorites, hidden channels and Live TV settings are saved in your own Google Drive, in a private app folder only this app can see. Nothing is stored anywhere else.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = NuvioTheme.colors.TextSecondary
-                    )
-                    SettingsActionRow("Connect Google Drive", "Keeps your Live TV setup the same on every TV, using your own Google Drive. Sign in with a code on your phone.", onClick = onConnect)
-                }
+                !state.connected -> Text(
+                    text = "Sign in to your Nuvio account on ${state.server ?: "your server"} (Settings → Account). Your playlists, guides, favorites, hidden channels and Live TV settings are then kept the same on every TV signed in to that account. Nothing is stored anywhere else.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NuvioTheme.colors.TextSecondary
+                )
                 else -> {
-                    SettingsActionRow("Account", "The Google account your Live TV setup is saved to", state.email ?: "Connected", onClick = {})
+                    SettingsActionRow("Account", "The account on ${state.server ?: "your server"} your Live TV setup is saved to", state.email ?: "Signed in", onClick = {})
                     SettingsToggleRow(
                         "Sync Automatically",
                         "Back up changes, and pick up changes made on your other TVs",
                         state.autoSync,
                         { onAutoSync(!state.autoSync) }
                     )
-                    SettingsActionRow("Back Up Now", "Save this TV's setup to Google Drive", onClick = onBackUp)
-                    SettingsActionRow("Restore from Google Drive", "Replace this TV's setup with the saved copy", onClick = onRestore)
-                    SettingsActionRow("Disconnect", "Stop syncing on this TV (your backup stays in Drive)", onClick = onDisconnect)
+                    SettingsActionRow("Back Up Now", "Save this TV's setup to your server", onClick = onBackUp)
+                    SettingsActionRow("Restore from Server", "Replace this TV's setup with the saved copy", onClick = onRestore)
                 }
             }
             state.message?.let {
                 Text(text = it, style = MaterialTheme.typography.bodySmall, color = NuvioTheme.colors.TextSecondary)
-            }
-        }
-    }
-}
-
-@Composable
-private fun DriveSignInDialog(prompt: com.nuvio.tv.livetv.sync.SignInPrompt, onCancel: () -> Unit) {
-    val cancelFocus = remember { FocusRequester() }
-    LaunchedEffect(Unit) {
-        delay(80)
-        runCatching { cancelFocus.requestFocus() }
-    }
-    // Same layout as Nuvio's other QR sign-ins (debrid, Simkl): instructions, QR code, then the code.
-    val qrBitmap = remember(prompt.qrUrl) {
-        runCatching { com.nuvio.tv.core.qr.QrCodeGenerator.generate(prompt.qrUrl, 420, margin = 1) }.getOrNull()
-    }
-    val shortUrl = prompt.url.removePrefix("https://").removePrefix("http://")
-    NuvioDialog(onDismiss = onCancel, title = "Connect Google Drive", width = 560.dp) {
-        Text(
-            text = "Scan the QR code with your phone, or go to $shortUrl, then enter the code below and allow access.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = NuvioTheme.colors.TextSecondary,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-        if (qrBitmap != null) {
-            androidx.compose.foundation.Image(
-                bitmap = qrBitmap.asImageBitmap(),
-                contentDescription = "QR code",
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .size(196.dp),
-                contentScale = androidx.compose.ui.layout.ContentScale.Fit
-            )
-        }
-        Text(
-            text = prompt.userCode,
-            style = MaterialTheme.typography.displaySmall,
-            color = NuvioTheme.colors.Secondary,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Text(
-            text = shortUrl,
-            style = MaterialTheme.typography.titleMedium,
-            color = NuvioTheme.colors.TextPrimary,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Text(
-            text = "Waiting for you to allow access… this screen continues by itself.",
-            style = MaterialTheme.typography.bodySmall,
-            color = NuvioTheme.colors.TextSecondary,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-        SettingsDialogActionRow(horizontalAlignment = Alignment.CenterHorizontally) {
-            androidx.compose.foundation.layout.Box(Modifier.focusRequester(cancelFocus)) {
-                SettingsDialogActionButton(text = "Cancel", onClick = onCancel)
             }
         }
     }
@@ -2286,8 +2209,8 @@ private fun ConfirmDeleteDialog(
 }
 
 /** The restore prompt's text: what's replaced, when the saved copy was made and where, and a warning when it's old. */
-private fun restoreMessage(loaded: Boolean, info: com.nuvio.tv.livetv.sync.LiveTvDriveSync.BackupInfo?, localChangedAt: Long): String {
-    val base = "This TV's Live TV setup (playlists, guides, favorites and settings) is replaced with the copy in your Google Drive."
+private fun restoreMessage(loaded: Boolean, info: com.nuvio.tv.livetv.sync.LiveTvAccountSync.BackupInfo?, localChangedAt: Long): String {
+    val base = "This TV's Live TV setup (playlists, guides, favorites and settings) is replaced with the copy on your server."
     if (!loaded) return "$base\n\nChecking when it was saved…"
     if (info == null || info.savedAtMs <= 0L) return base
     val now = System.currentTimeMillis()

@@ -38,6 +38,7 @@ internal fun visibleSettingsCategories(
         SettingsCategory.WATCH_PARTY -> isWatchPartyAvailable
         SettingsCategory.DEBUG -> isDebugBuild && !isEssentialMode
         SettingsCategory.EXPERIENCE -> false
+        SettingsCategory.SPORTS -> com.nuvio.tv.BuildConfig.FEATURE_SPORTS_ENABLED
         else -> true
     }
 }

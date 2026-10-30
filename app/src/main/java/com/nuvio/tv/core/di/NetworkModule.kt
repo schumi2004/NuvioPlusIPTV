@@ -513,7 +513,7 @@ object NetworkModule {
     @Named("supporters")
     fun provideSupportersRetrofit(okHttpClient: OkHttpClient, moshi: Moshi): Retrofit =
         Retrofit.Builder()
-            .baseUrl(normalizedBaseUrl(BuildConfig.SUPPORTERS_API_BASE_URL, "https://nuvio.tv/"))
+            .baseUrl(normalizedBaseUrl(BuildConfig.SUPPORTERS_API_BASE_URL, "https://localhost/"))
             .client(okHttpClient)
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()

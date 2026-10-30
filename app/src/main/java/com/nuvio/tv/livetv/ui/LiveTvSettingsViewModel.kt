@@ -20,7 +20,7 @@ import javax.inject.Inject
 class LiveTvSettingsViewModel @Inject constructor(
     private val repository: LiveTvRepository,
     private val prefs: LiveTvPreferences,
-    val driveSync: com.nuvio.tv.livetv.sync.LiveTvDriveSync,
+    val accountSync: com.nuvio.tv.livetv.sync.LiveTvAccountSync,
     val onDemand: com.nuvio.tv.livetv.ondemand.OnDemandRepository,
     private val posterResolver: com.nuvio.tv.livetv.data.LiveTvPosterResolver,
     private val matcher247: com.nuvio.tv.livetv.data.LiveTv247Matcher
@@ -41,7 +41,7 @@ class LiveTvSettingsViewModel @Inject constructor(
 
     init {
         repository.ensureLoaded()
-        driveSync.start()
+        accountSync.start()
     }
 
     fun update(transform: (LiveTvSettings) -> LiveTvSettings) {

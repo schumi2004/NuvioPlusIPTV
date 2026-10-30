@@ -41,8 +41,11 @@ jobs:
           SIMKL_CLIENT_ID: ${{ secrets.SIMKL_CLIENT_ID }}
           SIMKL_APP_NAME: ${{ secrets.SIMKL_APP_NAME }}
           MDBLIST_CLIENT_ID: ${{ secrets.MDBLIST_CLIENT_ID }}
-          GOOGLE_DRIVE_CLIENT_ID: ${{ secrets.GOOGLE_DRIVE_CLIENT_ID }}
-          GOOGLE_DRIVE_CLIENT_SECRET: ${{ secrets.GOOGLE_DRIVE_CLIENT_SECRET }}
+          # Your own NuvioMedia/self-host server, built in as the only server.
+          SELFHOST_BACKEND_URL: ${{ secrets.SELFHOST_BACKEND_URL }}
+          SELFHOST_PUBLISHABLE_KEY: ${{ secrets.SELFHOST_PUBLISHABLE_KEY }}
+          # Sports hub: set the repository variable SPORTS_ENABLED to true to build it in.
+          SPORTS_ENABLED: ${{ vars.SPORTS_ENABLED }}
           PREMIUMIZE_CLIENT_ID: ${{ secrets.PREMIUMIZE_CLIENT_ID }}
           # IMDb ratings (episode ratings and the rating on details pages) come from Nuvio's
           # ratings services; without these the app has nowhere to ask, so no ratings show.
@@ -76,8 +79,9 @@ jobs:
           add SIMKL_CLIENT_ID "$SIMKL_CLIENT_ID"
           add SIMKL_APP_NAME "$SIMKL_APP_NAME"
           add MDBLIST_CLIENT_ID "$MDBLIST_CLIENT_ID"
-          add GOOGLE_DRIVE_CLIENT_ID "$GOOGLE_DRIVE_CLIENT_ID"
-          add GOOGLE_DRIVE_CLIENT_SECRET "$GOOGLE_DRIVE_CLIENT_SECRET"
+          add SELFHOST_BACKEND_URL "$SELFHOST_BACKEND_URL"
+          add SELFHOST_PUBLISHABLE_KEY "$SELFHOST_PUBLISHABLE_KEY"
+          add SPORTS_ENABLED "$SPORTS_ENABLED"
           add PREMIUMIZE_CLIENT_ID "$PREMIUMIZE_CLIENT_ID"
           add IMDB_RATINGS_API_BASE_URL "$IMDB_RATINGS_API_BASE_URL"
           add IMDB_TAPFRAME_API_BASE_URL "$IMDB_TAPFRAME_API_BASE_URL"

@@ -63,3 +63,6 @@ AGENTS.md
 /PR.md
 docs/
 status-page/
+
+# Live TV fork: local deploy settings (hostname, LAN ranges)
+selfhost/deploy/nuvio.env

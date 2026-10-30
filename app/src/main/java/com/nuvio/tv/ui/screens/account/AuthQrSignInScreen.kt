@@ -231,7 +231,8 @@ fun AuthQrSignInScreen(
             )
         }
 
-        if (BuildConfig.FEATURE_CUSTOM_SERVER_CONNECTIONS_ENABLED) {
+        // Live TV fork: no server menu when your own server is built in (it's the only one).
+        if (BuildConfig.FEATURE_CUSTOM_SERVER_CONNECTIONS_ENABLED && BuildConfig.SELFHOST_BACKEND_URL.isBlank()) {
             ServerOptionsMenuHost(
                 viewModel = hiltViewModel(),
                 modifier = Modifier

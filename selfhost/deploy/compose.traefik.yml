@@ -1,0 +1,21 @@
+# Added to the self-host checkout's COMPOSE_FILE by install.sh (TRAEFIK_MODE=labels).
+# Puts the Nuvio gateway on Traefik's network with a LAN-only router. Values come from .env.
+services:
+  caddy:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=${TRAEFIK_NETWORK:-proxy}"
+      - "traefik.http.routers.nuvio-backend.rule=Host(`${NUVIO_DOMAIN}`)"
+      - "traefik.http.routers.nuvio-backend.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.nuvio-backend.tls=true"
+      - "traefik.http.routers.nuvio-backend.tls.certresolver=${TRAEFIK_CERTRESOLVER:?set TRAEFIK_CERTRESOLVER in nuvio.env}"
+      - "traefik.http.routers.nuvio-backend.middlewares=nuvio-backend-lan"
+      - "traefik.http.middlewares.nuvio-backend-lan.${TRAEFIK_IPALLOW_KEY:-ipallowlist}.sourcerange=${NUVIO_LAN_RANGES:?set NUVIO_LAN_RANGES in nuvio.env}"
+      - "traefik.http.services.nuvio-backend.loadbalancer.server.port=80"
+    networks:
+      traefik:
+
+networks:
+  traefik:
+    name: ${TRAEFIK_NETWORK:-proxy}
+    external: true

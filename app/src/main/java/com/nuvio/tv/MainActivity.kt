@@ -1120,8 +1120,10 @@ open class MainActivity : ComponentActivity() {
                     val recordingNow = allRecordings.any {
                         it.status == com.nuvio.tv.livetv.record.RecordingStatus.RECORDING
                     }
-                    // Live TV fork: the Sports page (on unless switched off in Sports settings).
-                    val sportsInSidebar = sportsRepository.settings.collectAsState().value.showInSidebar
+                    // Live TV fork: the Sports page (on unless switched off in Sports settings,
+                    // or left out of the build).
+                    val sportsSidebarSetting = sportsRepository.settings.collectAsState().value.showInSidebar
+                    val sportsInSidebar = com.nuvio.tv.BuildConfig.FEATURE_SPORTS_ENABLED && sportsSidebarSetting
                     // (The Live TV sub-list is gone: every page is in the one menu again. These stay
                     // so the menus' wiring is unchanged; nothing opens a sub-list any more.)
                     var liveTvGroupOpen by remember { mutableStateOf(false) }

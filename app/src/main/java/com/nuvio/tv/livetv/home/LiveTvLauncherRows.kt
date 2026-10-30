@@ -85,7 +85,7 @@ object LiveTvLauncherRows {
         val prefs = entry.liveTvPreferences()
         val settings = prefs.settings.first()
         // The three rows are always on offer: the launcher's own settings decide which to show.
-        val wanted = listOf(ROW_SPORTS, ROW_FAVORITES, ROW_RECENT)
+        val wanted = listOfNotNull(ROW_SPORTS.takeIf { com.nuvio.tv.BuildConfig.FEATURE_SPORTS_ENABLED }, ROW_FAVORITES, ROW_RECENT)
         val store = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val helper = PreviewChannelHelper(context)
         LauncherImages.tidy(context)

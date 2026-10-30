@@ -1,0 +1,27 @@
+# Alternative to compose.traefik.yml (TRAEFIK_MODE=file): drop this in Traefik's file-provider
+# directory and attach the Traefik container to the external network "nuvio-proxy"
+# (created by ./nuvio up). Replace the hostname, resolver and LAN range like in nuvio.env.
+# Traefik v2: use ipWhiteList instead of ipAllowList.
+http:
+  routers:
+    nuvio-backend:
+      rule: Host(`nuvio.example.com`)
+      entryPoints:
+        - websecure
+      middlewares:
+        - nuvio-backend-lan
+      service: nuvio-backend
+      tls:
+        certResolver: CHANGE_ME
+
+  middlewares:
+    nuvio-backend-lan:
+      ipAllowList:
+        sourceRange:
+          - 192.168.1.0/24
+
+  services:
+    nuvio-backend:
+      loadBalancer:
+        servers:
+          - url: http://nuvio-gateway:80

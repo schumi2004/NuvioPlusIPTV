@@ -209,6 +209,7 @@ class SportsRepository @Inject constructor(
 
     /** Starts the background updates (once). Called by the app as it starts. */
     fun start() {
+        if (!com.nuvio.tv.BuildConfig.FEATURE_SPORTS_ENABLED) return
         if (started) return
         started = true
         scope.launch {

@@ -87,7 +87,7 @@ fun NuvioNavHost(
     // Live TV fork: "Loading channels… / Importing movies…" pill while things download.
     com.nuvio.tv.livetv.ui.LiveTvLoadingHost(navController)
     // Live TV fork: Sports reminders and scoring alerts, on top of whatever screen you're on.
-    com.nuvio.tv.livetv.sports.SportsHost(navController)
+    if (com.nuvio.tv.BuildConfig.FEATURE_SPORTS_ENABLED) com.nuvio.tv.livetv.sports.SportsHost(navController)
 }
 
 @Composable
